@@ -12,7 +12,7 @@ PAGINA = """
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>DataPilot</title>
+    <title>Demo</title>
     <style>
         body {
             max-width: 850px;
@@ -37,8 +37,8 @@ PAGINA = """
     </style>
 </head>
 <body>
-    <h1>DataPilot</h1>
-    <p>Una piccola demo per controllare un CSV e lavorare con Base64.</p>
+    <h1>Demo</h1>
+    <p>Una piccola demo per controllare un CSV e provare Base64.</p>
 
     <section>
         <h2>Controlla un file CSV</h2>
