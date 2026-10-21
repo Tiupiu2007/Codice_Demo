@@ -1,0 +1,11 @@
+import base64
+import codecs
+
+messaggio = (
+    "UGJ6Y3l2enJhZ3YgY3JlIHJmZnJlciBuZWV2aW5nYiBzdmEgZGh2ISBZbiBmc3ZxbiBhYmEgcG56b3ZuLCB5cnR0diBuZ2dyYWduenJhZ3IgdnkgYWJmZ2ViIGZ2Z2IgciBjcmFmbiBucSBoYSduY2N5dnBubXZiYXIgdmEgeXZhcm4gcGJhIHluIGFiZmdlbiB6dmZmdmJhciByIGNlYmluIG4gZml2eWhjY25lYXIgaGFuIHFyemIgYiBmYnluenJhZ3IgdnkgcGJhcHJjZy4gVmFpdm55biB2YWZ2cnpyIG55IGdoYiBwaGVldnBoeWh6IHF2ZXJnZ256cmFnciBueSBhYmZnZWIgZXJjbmVnYiBncnBhdnBiLCBuIHFyaUBudmVjdnoucGJ6IHBiYSBidHRyZ2diOiBPdnQgUW5nbiBRcmlyeWJjcmUgLSBGc3ZxbiAy=="
+)
+
+testo = base64.b64decode(messaggio).decode("utf-8")
+testo = codecs.decode(testo, "rot_13")
+
+print(testo)
