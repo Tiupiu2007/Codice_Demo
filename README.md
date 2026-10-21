@@ -1,14 +1,10 @@
-# DataPilot
+# Demo
 
-Questa è una piccola demo in Python e Flask.
+Piccolo progetto Python con due funzioni: controllare un file CSV e provare la codifica Base64.
 
-Serve a provare due cose:
-- controllare un file CSV e contare righe duplicate e campi vuoti;
-- codificare e decodificare un testo in Base64.
+## Avvio su Windows
 
-## Come avviarla su Windows
-
-Apri il terminale nella cartella del progetto e scrivi:
+Dalla cartella del progetto, nel terminale:
 
 ```powershell
 py -m venv .venv
@@ -17,8 +13,16 @@ python -m pip install -r requirements.txt
 python app.py
 ```
 
-Poi apri http://127.0.0.1:5000 nel browser.
+Apri http://127.0.0.1:5000 nel browser.
 
-Per provare la parte CSV puoi usare il file `esempio.csv`.
+Per provare il controllo CSV puoi usare `esempio.csv`.
 
-È una demo semplice, pensata per fare prove con dati di esempio. Base64 non è un sistema di cifratura e non rende segreti i dati.
+## Decodificare il messaggio
+
+Il file `decodifica.py` non ha un'interfaccia: stampa direttamente nel terminale il testo decodificato.
+
+```powershell
+py decodifica.py
+```
+
+Il messaggio è prima codificato in Base64 e poi trasformato con ROT13. Non è crittografia sicura: è solo una codifica semplice.
