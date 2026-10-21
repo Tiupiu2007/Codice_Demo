@@ -1,4 +1,3 @@
-import base64
 import csv
 import io
 
@@ -38,7 +37,7 @@ PAGINA = """
 </head>
 <body>
     <h1>Demo</h1>
-    <p>Una piccola demo per controllare un CSV e provare Base64.</p>
+    <p>Una piccola demo per controllare la qualità di un file CSV.</p>
 
     <section>
         <h2>Controlla un file CSV</h2>
@@ -79,20 +78,6 @@ PAGINA = """
     </section>
     {% endif %}
 
-    <section>
-        <h2>Convertitore Base64</h2>
-        <p>Scrivi un testo e scegli se codificarlo o provare a decodificarlo.</p>
-        <form method="post" action="/base64">
-            <textarea name="testo" rows="4" placeholder="Scrivi qui il testo...">{{ testo }}</textarea>
-            <br>
-            <button name="azione" value="codifica" type="submit">Codifica</button>
-            <button name="azione" value="decodifica" type="submit">Decodifica</button>
-        </form>
-        {% if risultato is not none %}
-            <label for="risultato"><b>Risultato</b></label>
-            <textarea id="risultato" rows="4" readonly>{{ risultato }}</textarea>
-        {% endif %}
-    </section>
 </body>
 </html>
 """
@@ -168,8 +153,6 @@ def home():
         anteprima=anteprima,
         csv_pulito=csv_pulito,
         errore=errore,
-        testo="",
-        risultato=None,
     )
 
 
@@ -180,32 +163,6 @@ def scarica():
     risposta.headers["Content-Type"] = "text/csv; charset=utf-8"
     risposta.headers["Content-Disposition"] = "attachment; filename=csv_pulito.csv"
     return risposta
-
-
-@app.route("/base64", methods=["POST"])
-def converti_base64():
-    testo = request.form.get("testo", "")
-    azione = request.form.get("azione")
-    risultato = ""
-
-    try:
-        if azione == "codifica":
-            risultato = base64.b64encode(testo.encode("utf-8")).decode("ascii")
-        else:
-            risultato = base64.b64decode(testo, validate=True).decode("utf-8")
-    except (ValueError, UnicodeDecodeError):
-        risultato = "Testo Base64 non valido oppure non codificato in UTF-8."
-
-    return render_template_string(
-        PAGINA,
-        report=None,
-        colonne=[],
-        anteprima=[],
-        csv_pulito="",
-        errore=None,
-        testo=testo,
-        risultato=risultato,
-    )
 
 
 if __name__ == "__main__":
