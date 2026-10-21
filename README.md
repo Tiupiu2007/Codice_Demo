@@ -1,14 +1,14 @@
-# DataPilot — demo
+# DataPilot
 
-Piccola demo Python/Flask per mostrare un semplice controllo della qualità dei dati CSV.
+Questa è una piccola demo in Python e Flask.
 
-## Funzioni
-- Caricamento di un CSV.
-- Conteggio righe, righe duplicate e campi vuoti.
-- Anteprima dei primi 10 record.
-- Download di un CSV senza righe duplicate.
+Serve a provare due cose:
+- controllare un file CSV e contare righe duplicate e campi vuoti;
+- codificare e decodificare un testo in Base64.
 
-## Avvio su Windows (PowerShell)
+## Come avviarla su Windows
+
+Apri il terminale nella cartella del progetto e scrivi:
 
 ```powershell
 py -m venv .venv
@@ -17,6 +17,8 @@ python -m pip install -r requirements.txt
 python app.py
 ```
 
-Apri poi http://127.0.0.1:5000 nel browser.
+Poi apri http://127.0.0.1:5000 nel browser.
 
-Il progetto è una demo didattica: usa solo file di prova e non caricare dati personali o aziendali riservati.
+Per provare la parte CSV puoi usare il file `esempio.csv`.
+
+È una demo semplice, pensata per fare prove con dati di esempio. Base64 non è un sistema di cifratura e non rende segreti i dati.
