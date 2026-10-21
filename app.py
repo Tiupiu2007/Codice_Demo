@@ -1,127 +1,212 @@
-from flask import Flask, request, render_template_string, make_response
+import base64
 import csv
 import io
 
+from flask import Flask, make_response, render_template_string, request
+
 app = Flask(__name__)
 
-PAGE = """
+PAGINA = """
 <!doctype html>
 <html lang="it">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>DataPilot - Demo</title>
-  <style>
-    body { font-family: Arial, sans-serif; max-width: 850px; margin: 40px auto; padding: 0 16px; color: #222; }
-    section { border: 1px solid #ddd; border-radius: 10px; padding: 20px; margin: 18px 0; }
-    button { padding: 10px 14px; cursor: pointer; }
-    table { border-collapse: collapse; width: 100%; margin-top: 14px; }
-    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-    th { background: #f2f2f2; }
-    .stats { display: flex; gap: 18px; flex-wrap: wrap; }
-  </style>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>DataPilot</title>
+    <style>
+        body {
+            max-width: 850px;
+            margin: 35px auto;
+            padding: 0 16px;
+            font-family: Arial, sans-serif;
+            color: #222;
+        }
+        section {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 18px;
+            margin: 20px 0;
+        }
+        input, button, textarea { margin: 6px 0; }
+        textarea { box-sizing: border-box; width: 100%; padding: 10px; }
+        button { padding: 9px 12px; cursor: pointer; }
+        table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background: #f2f2f2; }
+        .errore { color: #b00020; }
+    </style>
 </head>
 <body>
-  <h1>DataPilot</h1>
-  <p>Demo semplice per controllare la qualità di un file CSV.</p>
-  <section>
-    <h2>1. Carica i dati</h2>
-    <p>Il file deve essere in formato CSV, con la prima riga contenente i nomi delle colonne.</p>
-    <form method="post" enctype="multipart/form-data">
-      <input type="file" name="file" accept=".csv" required>
-      <button type="submit">Analizza CSV</button>
-    </form>
-  </section>
-  {% if report %}
-  <section>
-    <h2>2. Risultato</h2>
-    <div class="stats">
-      <p><b>Righe:</b> {{ report.rows }}</p>
-      <p><b>Righe duplicate:</b> {{ report.duplicates }}</p>
-      <p><b>Campi vuoti:</b> {{ report.empty }}</p>
-    </div>
-    <p>La demo identifica i problemi, ma non modifica il file originale.</p>
-    <form method="post" action="/download">
-      <input type="hidden" name="data" value="{{ csv_data }}">
-      <button type="submit">Scarica CSV senza duplicati</button>
-    </form>
-    <h3>Anteprima</h3>
-    <table>
-      <thead><tr>{% for col in columns %}<th>{{ col }}</th>{% endfor %}</tr></thead>
-      <tbody>
-      {% for row in preview %}
-        <tr>{% for value in row %}<td>{{ value }}</td>{% endfor %}</tr>
-      {% endfor %}
-      </tbody>
-    </table>
-  </section>
-  {% endif %}
+    <h1>DataPilot</h1>
+    <p>Una piccola demo per controllare un CSV e lavorare con Base64.</p>
+
+    <section>
+        <h2>Controlla un file CSV</h2>
+        <p>Carica un file CSV con i nomi delle colonne nella prima riga.</p>
+        <form method="post" enctype="multipart/form-data">
+            <input type="file" name="file" accept=".csv" required>
+            <button type="submit">Analizza file</button>
+        </form>
+    </section>
+
+    {% if errore %}
+        <p class="errore">{{ errore }}</p>
+    {% endif %}
+
+    {% if report %}
+    <section>
+        <h2>Risultato</h2>
+        <p>Righe nel file: <b>{{ report.righe }}</b></p>
+        <p>Righe duplicate: <b>{{ report.duplicate }}</b></p>
+        <p>Campi vuoti: <b>{{ report.vuoti }}</b></p>
+        <p>Qui sotto trovi un'anteprima delle prime 10 righe.</p>
+
+        <table>
+            <thead>
+                <tr>{% for colonna in colonne %}<th>{{ colonna }}</th>{% endfor %}</tr>
+            </thead>
+            <tbody>
+                {% for riga in anteprima %}
+                <tr>{% for valore in riga %}<td>{{ valore }}</td>{% endfor %}</tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <form method="post" action="/scarica">
+            <input type="hidden" name="csv" value="{{ csv_pulito }}">
+            <button type="submit">Scarica il CSV senza duplicati</button>
+        </form>
+    </section>
+    {% endif %}
+
+    <section>
+        <h2>Convertitore Base64</h2>
+        <p>Scrivi un testo e scegli se codificarlo o provare a decodificarlo.</p>
+        <form method="post" action="/base64">
+            <textarea name="testo" rows="4" placeholder="Scrivi qui il testo...">{{ testo }}</textarea>
+            <br>
+            <button name="azione" value="codifica" type="submit">Codifica</button>
+            <button name="azione" value="decodifica" type="submit">Decodifica</button>
+        </form>
+        {% if risultato is not none %}
+            <label for="risultato"><b>Risultato</b></label>
+            <textarea id="risultato" rows="4" readonly>{{ risultato }}</textarea>
+        {% endif %}
+    </section>
 </body>
 </html>
 """
 
+
 @app.route("/", methods=["GET", "POST"])
 def home():
     report = None
-    columns = []
-    preview = []
-    csv_data = ""
+    colonne = []
+    anteprima = []
+    csv_pulito = ""
+    errore = None
 
     if request.method == "POST":
-        uploaded = request.files.get("file")
-        if not uploaded or not uploaded.filename:
-            return "Seleziona un file CSV.", 400
+        file = request.files.get("file")
 
-        try:
-            content = uploaded.stream.read().decode("utf-8-sig")
-            reader = csv.DictReader(io.StringIO(content))
-            columns = reader.fieldnames or []
-            rows = list(reader)
+        if file and file.filename:
+            try:
+                testo_csv = file.read().decode("utf-8-sig")
+                lettore = csv.DictReader(io.StringIO(testo_csv))
+                colonne = lettore.fieldnames or []
+                righe = list(lettore)
 
-            if not columns:
-                return "Il CSV deve avere una riga iniziale con i nomi delle colonne.", 400
+                if not colonne:
+                    raise ValueError("Il CSV deve contenere i nomi delle colonne.")
 
-            seen = set()
-            clean_rows = []
-            duplicates = 0
-            empty = 0
+                viste = set()
+                righe_pulite = []
+                duplicate = 0
+                vuoti = 0
 
-            for row in rows:
-                empty += sum(1 for value in row.values() if value is None or not value.strip())
-                key = tuple((row.get(col) or "").strip() for col in columns)
-                if key in seen:
-                    duplicates += 1
-                else:
-                    seen.add(key)
-                    clean_rows.append({col: (row.get(col) or "").strip() for col in columns})
+                for riga in righe:
+                    vuoti += sum(
+                        1 for valore in riga.values()
+                        if valore is None or not valore.strip()
+                    )
 
-            report = {
-                "rows": len(rows),
-                "duplicates": duplicates,
-                "empty": empty,
-            }
-            preview = [[row.get(col, "") for col in columns] for row in rows[:10]]
+                    chiave = tuple((riga.get(colonna) or "").strip() for colonna in colonne)
 
-            output = io.StringIO()
-            writer = csv.DictWriter(output, fieldnames=columns)
-            writer.writeheader()
-            writer.writerows(clean_rows)
-            csv_data = output.getvalue()
+                    if chiave in viste:
+                        duplicate += 1
+                        continue
 
-        except (UnicodeDecodeError, csv.Error):
-            return "Non riesco a leggere il file. Prova a salvarlo come CSV UTF-8.", 400
+                    viste.add(chiave)
+                    righe_pulite.append({
+                        colonna: (riga.get(colonna) or "").strip()
+                        for colonna in colonne
+                    })
+
+                report = {
+                    "righe": len(righe),
+                    "duplicate": duplicate,
+                    "vuoti": vuoti,
+                }
+                anteprima = [
+                    [riga.get(colonna, "") for colonna in colonne]
+                    for riga in righe[:10]
+                ]
+
+                output = io.StringIO()
+                scrittore = csv.DictWriter(output, fieldnames=colonne)
+                scrittore.writeheader()
+                scrittore.writerows(righe_pulite)
+                csv_pulito = output.getvalue()
+
+            except (UnicodeDecodeError, csv.Error, ValueError) as errore_csv:
+                errore = str(errore_csv) or "Non riesco a leggere il file. Prova un CSV UTF-8."
 
     return render_template_string(
-        PAGE, report=report, columns=columns, preview=preview, csv_data=csv_data
+        PAGINA,
+        report=report,
+        colonne=colonne,
+        anteprima=anteprima,
+        csv_pulito=csv_pulito,
+        errore=errore,
+        testo="",
+        risultato=None,
     )
 
-@app.route("/download", methods=["POST"])
-def download():
-    data = request.form.get("data", "")
-    response = make_response(data)
-    response.headers["Content-Type"] = "text/csv; charset=utf-8"
-    response.headers["Content-Disposition"] = "attachment; filename=dati_puliti.csv"
-    return response
+
+@app.route("/scarica", methods=["POST"])
+def scarica():
+    contenuto = request.form.get("csv", "")
+    risposta = make_response(contenuto)
+    risposta.headers["Content-Type"] = "text/csv; charset=utf-8"
+    risposta.headers["Content-Disposition"] = "attachment; filename=csv_pulito.csv"
+    return risposta
+
+
+@app.route("/base64", methods=["POST"])
+def converti_base64():
+    testo = request.form.get("testo", "")
+    azione = request.form.get("azione")
+    risultato = ""
+
+    try:
+        if azione == "codifica":
+            risultato = base64.b64encode(testo.encode("utf-8")).decode("ascii")
+        else:
+            risultato = base64.b64decode(testo, validate=True).decode("utf-8")
+    except (ValueError, UnicodeDecodeError):
+        risultato = "Testo Base64 non valido oppure non codificato in UTF-8."
+
+    return render_template_string(
+        PAGINA,
+        report=None,
+        colonne=[],
+        anteprima=[],
+        csv_pulito="",
+        errore=None,
+        testo=testo,
+        risultato=risultato,
+    )
+
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run()
